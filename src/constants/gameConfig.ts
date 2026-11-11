@@ -10,6 +10,9 @@ export const GAME_CONFIG = {
   // 쇠구슬
   BALL_RADIUS: 22,
 
+  // 목표 지점 (현재는 그림용, 도착 판정은 다음 단계에서 사용)
+  GOAL_RADIUS: 36,
+
   // 자기력
   MAGNET_RANGE: 150, // 영향 범위
   MAGNET_MAX_ACCEL: 2600, // px/s^2 (가까울수록 강함)
