@@ -22,6 +22,7 @@ export function MagnetPen({ s }: { s: PhysicsShared }) {
       { translateX: s.penX.value - W / 2 },
       { translateY: s.penY.value - H / 2 },
     ],
+    zIndex: 25,
   }));
 
   return (

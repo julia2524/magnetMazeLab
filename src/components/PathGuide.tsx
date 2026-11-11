@@ -1,5 +1,5 @@
 import { StyleSheet, View } from "react-native";
-import Svg, { Circle, Polygon, Polyline } from "react-native-svg";
+import Svg, { Circle, Polygon } from "react-native-svg";
 import { GAME_CONFIG } from "../constants/gameConfig";
 import { toBoardPoint } from "../levels/levelGenerator";
 import type { GeneratedRound } from "../levels/levelTypes";
@@ -17,39 +17,32 @@ function starPoints(cx: number, cy: number, outer: number, inner: number) {
   return pts.join(" ");
 }
 
-/** 경로(점선 가이드) + 시작점 + 목적지. 물리/충돌과는 무관한 그림일 뿐이다. */
+/**
+ * 시작점 + 목적지 표시.
+ * 기존 점선 경로는 최종 게임 화면에서 제거 (벽이 통로를 보여 주므로 불필요).
+ */
 export function PathGuide({ round, width, height }: Props) {
-  const pts = round.pathPoints.map((p) => toBoardPoint(p, width, height));
   const start = toBoardPoint(round.startPosition, width, height);
   const goal = toBoardPoint(round.goalPosition, width, height);
   const G = GAME_CONFIG.GOAL_RADIUS;
+  // 시작점 표시 크기는 구슬보다 약간 크게 (레벨별 구슬 크기는 IronBall 이 처리)
+  const startR = GAME_CONFIG.BALL_RADIUS + 8;
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Svg width={width} height={height}>
-        {pts.length > 1 && (
-          <Polyline
-            points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
-            fill="none"
-            stroke="#8FBBFF"
-            strokeWidth={10}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeDasharray="1 18"
-          />
-        )}
-        {/* 시작점 */}
+        {/* 시작점 — 입구가 명확히 보이도록 */}
         <Circle
           cx={start.x}
           cy={start.y}
-          r={GAME_CONFIG.BALL_RADIUS + 10}
+          r={startR}
           fill="#C8F0C8"
-          opacity={0.8}
+          opacity={0.85}
         />
         <Circle
           cx={start.x}
           cy={start.y}
-          r={GAME_CONFIG.BALL_RADIUS + 10}
+          r={startR}
           fill="none"
           stroke="#43A047"
           strokeWidth={3}
