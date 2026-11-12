@@ -212,7 +212,13 @@
 // });
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type LayoutChangeEvent,
+} from "react-native";
 import { useFrameCallback, useSharedValue } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GameBoard } from "../components/GameBoard";
@@ -221,7 +227,11 @@ import { MagnetPen } from "../components/MagnetPen";
 import { PathGuide } from "../components/PathGuide";
 import { PathWall } from "../components/PathWall";
 import { GAME_CONFIG } from "../constants/gameConfig";
-import { LEVEL_CONFIGS, getLevelConfig } from "../levels/levelConfigs";
+import {
+  LEVEL_CONFIGS,
+  fitConfigToBoard,
+  getLevelConfig,
+} from "../levels/levelConfigs";
 import { generateRound } from "../levels/levelGenerator";
 import { buildWallGeometry } from "../physics/collisionGeometry";
 import { resetBall, stepPhysics } from "../physics/physicsEngine";
@@ -268,7 +278,19 @@ export default function MagnetMazeScreen() {
   const [roundIndex, setRoundIndex] = useState(0);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
 
-  const config = getLevelConfig(levelId);
+  const baseConfig = getLevelConfig(levelId);
+  // 정사각형 보드 한 변(px): 보드 영역의 가로/세로 중 짧은 쪽
+  const [side, setSide] = useState(0);
+  const onWrapLayout = (ev: LayoutChangeEvent) => {
+    const { width, height } = ev.nativeEvent.layout;
+    const next = Math.floor(Math.min(width, height));
+    if (next > 0) setSide((prev) => (prev === next ? prev : next));
+  };
+  // 작은 화면에서는 통로 폭·벽 두께·구슬 반지름을 같은 비율로 줄여 보드 대비 비율을 유지
+  const config = useMemo(
+    () => (size ? fitConfigToBoard(baseConfig, size.w) : baseConfig),
+    [baseConfig, size],
+  );
 
   // 보드 가로세로비 + 레벨 + 라운드 → 라운드 데이터 생성
   const { round, error } = useMemo(() => {
@@ -419,17 +441,27 @@ export default function MagnetMazeScreen() {
 
       {error && <Text style={styles.error}>{error}</Text>}
 
-      <View style={styles.boardWrap}>
+      <View style={styles.boardWrap} onLayout={onWrapLayout}>
+        <View style={{ width: side, height: side }}>
         <GameBoard s={s} onBoardLayout={onBoardLayout}>
           {walls && size && (
             <PathWall geometry={walls} width={size.w} height={size.h} />
           )}
           {round && size && (
-            <PathGuide round={round} width={size.w} height={size.h} />
+            <PathGuide
+              round={round}
+              width={size.w}
+              height={size.h}
+              corridorWidth={
+                config.walls.hasWalls ? config.walls.corridorWidth : undefined
+              }
+              ballRadius={config.ballRadius}
+            />
           )}
           <MagnetPen s={s} />
           <IronBall s={s} />
         </GameBoard>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -497,5 +529,11 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
     fontSize: 12,
   },
-  boardWrap: { flex: 1, paddingHorizontal: 16, paddingBottom: 16 },
+  boardWrap: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

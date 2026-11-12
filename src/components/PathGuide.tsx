@@ -4,7 +4,15 @@ import { GAME_CONFIG } from "../constants/gameConfig";
 import { toBoardPoint } from "../levels/levelGenerator";
 import type { GeneratedRound } from "../levels/levelTypes";
 
-type Props = { round: GeneratedRound; width: number; height: number };
+type Props = {
+  round: GeneratedRound;
+  width: number;
+  height: number;
+  /** 통로 폭(px). 있으면 출발/도착 표시를 통로 안에 들어가도록 줄인다 */
+  corridorWidth?: number;
+  /** 쇠구슬 반지름(px). 출발 표시 크기 기준 */
+  ballRadius?: number;
+};
 
 /** 별 모양 꼭짓점 */
 function starPoints(cx: number, cy: number, outer: number, inner: number) {
@@ -21,7 +29,13 @@ function starPoints(cx: number, cy: number, outer: number, inner: number) {
  * 시작점 + 목적지 표시.
  * 기존 점선 경로는 최종 게임 화면에서 제거 (벽이 통로를 보여 주므로 불필요).
  */
-export function PathGuide({ round, width, height }: Props) {
+export function PathGuide({
+  round,
+  width,
+  height,
+  corridorWidth,
+  ballRadius,
+}: Props) {
   const start = toBoardPoint(round.startPosition, width, height);
   const goal = toBoardPoint(round.goalPosition, width, height);
   const G = GAME_CONFIG.GOAL_RADIUS;

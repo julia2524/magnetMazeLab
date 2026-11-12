@@ -471,6 +471,39 @@ export const LEVEL_CONFIGS: readonly LevelConfig[] = [
   level7,
 ];
 
+/**
+ * 통로/벽/구슬의 기준이 되는 보드 한 변(px). 이 크기 이상이면 설정값을 그대로 쓰고,
+ * 더 작은 화면에서는 통로 폭·벽 두께·구슬 반지름을 같은 비율로 줄여 보드 대비 비율을 유지한다.
+ * (정사각형 보드에서 같은 모양이 작은 화면에서도 똑같이 만들어지도록)
+ */
+export const REFERENCE_BOARD_PX = 430;
+
+/** 보드 한 변이 boardSidePx 일 때의 비율(최대 1) */
+export function boardScale(boardSidePx: number): number {
+  return Math.min(1, boardSidePx / REFERENCE_BOARD_PX);
+}
+
+/** 벽이 있는 레벨의 통로 폭·벽 두께·코너 반경·구슬 반지름을 보드 크기에 맞게 줄인 설정 */
+export function fitConfigToBoard(
+  config: LevelConfig,
+  boardSidePx: number,
+): LevelConfig {
+  const k = boardScale(boardSidePx);
+  if (!config.walls.hasWalls || k >= 1) return config;
+  const w = config.walls;
+  return {
+    ...config,
+    ballRadius: config.ballRadius * k,
+    walls: {
+      ...w,
+      corridorWidth: w.corridorWidth * k,
+      wallThickness: w.wallThickness * k,
+      cornerRadius: w.cornerRadius * k,
+      minCorridorWidth: w.minCorridorWidth * k,
+    },
+  } as LevelConfig;
+}
+
 export function getLevelConfig(levelId: number): LevelConfig {
   const config = LEVEL_CONFIGS.find((c) => c.levelId === levelId);
   if (!config)

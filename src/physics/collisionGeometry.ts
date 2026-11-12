@@ -1,13 +1,16 @@
 import type { GeneratedRound, Point, WallSettings } from "../levels/levelTypes";
+import { nearestOnCenterline } from "./wallCollision";
 
 /**
- * 중심선(Centerline) → 벽 변환.
+ * 중심선(Centerline) → 통로(Corridor) → 벽(Wall) 변환.
  *
- * 핵심 아이디어: 통로 = 중심선에서 corridorWidth/2 이내인 영역.
- *  - 그리기: 중심선을 굵은 선(round join/cap)으로 3겹 그린다 → 바깥 벽 / 안쪽 가장자리 / 바닥
- *  - 충돌:   "구슬 중심은 중심선에서 reach(= 통로 반폭 - 구슬 반지름) 이내"만 허용
- *  두 가지가 같은 중심선·같은 폭에서 나오기 때문에 보이는 벽과 충돌 영역이 항상 일치한다.
- *  안쪽/바깥쪽 코너를 따로 이어 붙일 필요가 없어서 벽이 겹치거나 벌어지는 문제도 생기지 않는다.
+ * 게임판 = 정사각형 전체가 벽. 거기서 통로만 비워 둔다.
+ *     벽 영역 = 보드 전체 − 통로 영역
+ *     통로 영역 = 중심선에서 corridorWidth/2 이내인 점들 (끝은 반원으로 닫힘)
+ *  - 그리기: 보드 전체 사각형을 벽으로 채우고, 같은 통로 영역(중심선 + 폭)을 mask 로 뚫는다 (PathWall)
+ *  - 충돌:   "구슬 중심은 중심선에서 reach(= 통로 반폭 - 구슬 반지름) 이내"만 허용 (wallCollision)
+ *  두 가지가 같은 중심선·같은 폭에서 나오기 때문에 보이는 통로와 충돌 영역이 항상 일치한다.
+ *  통로 끝은 둥글게 닫혀 있고(반지름 = 통로 반폭) 보드 테두리와는 항상 wallThickness 이상 떨어진다.
  *
  * 모든 좌표는 보드 픽셀 단위다. (정규화 좌표 → px 변환은 buildWallGeometry 에서 한 번만 한다)
  */
@@ -16,6 +19,12 @@ const DEG = Math.PI / 180;
 
 export interface WallGeometry {
   hasWalls: boolean;
+  /** 보드 크기(px). 벽 영역 = 이 사각형 전체 − 통로 */
+  boardWidth: number;
+  boardHeight: number;
+  /** 통로 양 끝(= 출발지 / 목적지 쪽). 중심선의 첫 점과 끝 점 */
+  start: Point;
+  goal: Point;
   /** 코너를 둥글게 깎은 최종 중심선 (px) */
   centerline: Point[];
   /** 충돌용 선분 [ax, ay, bx, by, ...] */
@@ -34,6 +43,10 @@ export interface WallGeometry {
 
 const EMPTY: WallGeometry = {
   hasWalls: false,
+  boardWidth: 0,
+  boardHeight: 0,
+  start: { x: 0, y: 0 },
+  goal: { x: 0, y: 0 },
   centerline: [],
   segs: [],
   segCount: 0,
@@ -201,6 +214,10 @@ export function buildWallGeometry(
 
   return {
     hasWalls: true,
+    boardWidth: boardW,
+    boardHeight: boardH,
+    start: centerline[0],
+    goal: centerline[centerline.length - 1],
     centerline,
     segs,
     segCount: segs.length / 4,
@@ -211,4 +228,48 @@ export function buildWallGeometry(
     reach: Math.max(0, walls.corridorWidth / 2 - ballRadius),
     pathD,
   };
+}
+
+/**
+ * 점이 "보이는 통로" 안인지 (반지름 extra 만큼 여유를 두고). 렌더링과 같은 기준이다.
+ * 구슬이 갈 수 있는 곳은 extra = ballRadius 일 때의 이 영역과 정확히 같다.
+ */
+export function isInCorridor(
+  g: WallGeometry,
+  x: number,
+  y: number,
+  extra = 0,
+): boolean {
+  if (!g.hasWalls) return true;
+  if (x < 0 || y < 0 || x > g.boardWidth || y > g.boardHeight) return false;
+  return nearestOnCenterline(g.segs, g.segCount, x, y).d <= g.corridorWidth / 2 - extra;
+}
+
+/**
+ * 보드 구조 검사 (지침서 5단계). 문제가 있으면 설명 문자열 목록, 없으면 빈 배열.
+ *  - 통로가 보드 안에 있고, 테두리와 최소 wallThickness 만큼 벽이 남는가 (= 테두리와 연결되지 않음)
+ *  - 출발지/목적지(통로 양 끝)가 보드 안쪽에 있는가
+ *  - 구슬이 지나갈 폭(reach > 0)이 있는가
+ *  - 다른 구간의 통로가 서로 너무 가깝지 않은가 (벽 한 겹 이상 유지 = 지름길 없음)
+ */
+export function verifyBoardGeometry(g: WallGeometry): string[] {
+  if (!g.hasWalls) return [];
+  const issues: string[] = [];
+  const half = g.corridorWidth / 2;
+  const need = half + g.wallThickness - 0.5; // 통로 끝(반원)까지 포함해 테두리에서 떨어져야 하는 거리
+  for (const p of g.centerline) {
+    const edge = Math.min(p.x, p.y, g.boardWidth - p.x, g.boardHeight - p.y);
+    if (edge < need) {
+      issues.push(
+        `통로가 보드 테두리에 너무 가까움 (남는 벽 ${(edge - half).toFixed(1)}px < ${g.wallThickness}px)`,
+      );
+      break;
+    }
+  }
+  if (g.reach <= 0) issues.push("통로가 쇠구슬보다 좁음");
+  const gap = minShortcutGap(g.centerline, Math.PI * (g.corridorWidth + g.wallThickness));
+  if (gap < g.corridorWidth + g.wallThickness - 0.5) {
+    issues.push("다른 구간의 통로가 서로 너무 가까움");
+  }
+  return issues;
 }

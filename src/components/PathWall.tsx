@@ -1,21 +1,32 @@
 import { StyleSheet, View } from "react-native";
-import Svg, { Path } from "react-native-svg";
+import Svg, { Defs, Mask, Path, Rect } from "react-native-svg";
 import type { WallGeometry } from "../physics/collisionGeometry";
 
 type Props = { geometry: WallGeometry; width: number; height: number };
 
+const WALL = "#C47A2A";
+const FLOOR = "#FFF8E7";
+const FLOOR_RIM = "#E3C896";
+const FLOOR_SHADE = "#F0E0C0";
+
 /**
- * 벽 그리기. 충돌에 쓰는 중심선(geometry.pathD)을 굵은 선으로 겹쳐 그린다.
- *   1) 바깥 윤곽 + 벽   : 폭 = 통로 폭 + 2 × 벽 두께
- *   2) 안쪽 가장자리    : 통로 폭 + 4  (벽 안쪽 면에 얇은 테두리)
- *   3) 바닥             : 폭 = 통로 폭 (= 충돌 영역의 안쪽 면)
- * 충돌은 "중심선에서 통로 폭/2 - 구슬 반지름" 이내만 허용하므로 보이는 벽과 정확히 같은 위치에서 막힌다.
- * 둥근 join/cap 덕분에 코너가 겹치거나 벌어지지 않는다.
- * strokeLinecap="round" 로 시작/끝 입구가 자연스럽게 열린 원형으로 보인다.
+ * 게임판 렌더링: "정사각형 보드 전체가 벽, 통로만 비어 있다."
+ *
+ *   벽 영역 = 보드 전체 사각형 − 통로 영역
+ *
+ *  1) 통로 바닥   : 중심선을 통로 폭(corridorWidth)으로 굵게 그린 것 (끝은 둥글게 닫힘)
+ *  2) 벽          : 보드 전체 사각형. SVG mask 로 "통로 영역"을 정확히 뚫는다.
+ *                   mask 의 구멍 = 충돌 판정이 쓰는 중심선 + 통로 폭 과 똑같은 모양이다.
+ *
+ * 벽을 중심선 양쪽에 따로 그리지 않으므로 코너에서 벽이 겹치거나 벌어지지 않고,
+ * 통로 바깥은 전부 벽이라 쇠구슬이 갈 수 있는 빈 공간이 남지 않는다.
+ * (바닥을 벽 아래에 먼저 깔고 벽에 구멍을 내는 구조 → 나중에 벽/바닥을 우주 테마로 바꿔도
+ *  통로 모양과 충돌에는 영향이 없다.)
  */
 export function PathWall({ geometry, width, height }: Props) {
   if (!geometry.hasWalls) return null;
   const d = geometry.pathD;
+  const corridor = geometry.corridorWidth;
   const common = {
     d,
     fill: "none",
@@ -23,26 +34,42 @@ export function PathWall({ geometry, width, height }: Props) {
     strokeLinejoin: "round" as const,
   };
 
-  const outer = geometry.outerWidth;
-  const corridor = geometry.corridorWidth;
-
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Svg width={width} height={height}>
-        {/* 1. 가장 바깥 어두운 윤곽 (벽 외곽) */}
-        <Path {...common} stroke="#5C3A0A" strokeWidth={outer + 6} />
-        {/* 2. 벽 본체 (따뜻한 갈색) */}
-        <Path {...common} stroke="#C47A2A" strokeWidth={outer} />
-        {/* 3. 벽 안쪽 면 테두리 (조금 더 어두운 톤으로 구분) */}
-        <Path {...common} stroke="#A05A18" strokeWidth={corridor + 5} />
-        {/* 4. 통로 바닥 (밝은 색 — 구슬이 다니는 길) */}
-        <Path {...common} stroke="#FFF8E7" strokeWidth={corridor} />
-        {/* 5. 바닥 중앙 살짝 그림자 (깊이감) */}
+        <Defs>
+          {/* 흰색 = 벽이 보이는 곳, 검정 = 통로(구멍) */}
+          <Mask
+            id="corridorHole"
+            maskUnits="userSpaceOnUse"
+            x={0}
+            y={0}
+            width={width}
+            height={height}
+          >
+            <Rect x={0} y={0} width={width} height={height} fill="white" />
+            <Path {...common} stroke="black" strokeWidth={corridor} />
+          </Mask>
+        </Defs>
+
+        {/* 1. 통로 바닥 (벽 아래에 깔림. 안쪽 가장자리가 살짝 어두운 테두리) */}
+        <Path {...common} stroke={FLOOR_RIM} strokeWidth={corridor} />
+        <Path {...common} stroke={FLOOR} strokeWidth={Math.max(2, corridor - 6)} />
         <Path
           {...common}
-          stroke="#F0E0C0"
+          stroke={FLOOR_SHADE}
           strokeWidth={Math.max(4, corridor * 0.35)}
           opacity={0.5}
+        />
+
+        {/* 2. 보드 전체를 덮는 벽. 통로 영역만 뚫려 있다 */}
+        <Rect
+          x={0}
+          y={0}
+          width={width}
+          height={height}
+          fill={WALL}
+          mask="url(#corridorHole)"
         />
       </Svg>
     </View>
