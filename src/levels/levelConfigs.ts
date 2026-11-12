@@ -19,7 +19,7 @@ const COMMON = {
 };
 
 // 벽이 있는 레벨은 통로 안을 지나야 하므로 쇠구슬을 조금 작게 쓴다 (Level 1 은 기존 크기 그대로)
-const MAZE_BALL_RADIUS = 16;
+//const MAZE_BALL_RADIUS = 16;
 
 const NO_WALLS: WallSettings = {
   hasWalls: false,
@@ -55,7 +55,7 @@ const level2: LevelConfig = {
   levelId: 2,
   levelType: LevelType.STRAIGHT,
   timeLimitSeconds: 50,
-  ballRadius: MAZE_BALL_RADIUS,
+  ballRadius: GAME_CONFIG.BALL_RADIUS,
   walls: {
     hasWalls: true,
     corridorWidth: 88,
@@ -79,7 +79,7 @@ const level3: LevelConfig = {
   levelId: 3,
   levelType: LevelType.L_SHAPE,
   timeLimitSeconds: 60,
-  ballRadius: MAZE_BALL_RADIUS,
+  ballRadius: GAME_CONFIG.BALL_RADIUS,
   walls: {
     hasWalls: true,
     corridorWidth: 84,
@@ -103,7 +103,7 @@ const level4: LevelConfig = {
   levelId: 4,
   levelType: LevelType.CIRCLE,
   timeLimitSeconds: 65,
-  ballRadius: MAZE_BALL_RADIUS,
+  ballRadius: GAME_CONFIG.BALL_RADIUS,
   walls: {
     hasWalls: true,
     corridorWidth: 80,
@@ -127,7 +127,7 @@ const level5: LevelConfig = {
   levelId: 5,
   levelType: LevelType.SPIRAL,
   timeLimitSeconds: 75,
-  ballRadius: MAZE_BALL_RADIUS,
+  ballRadius: GAME_CONFIG.BALL_RADIUS,
   // 나선은 고리 사이에 벽이 들어가야 해서 통로를 가장 좁게 쓴다
   walls: {
     hasWalls: true,
@@ -182,7 +182,7 @@ const level6: LevelConfig = {
   levelId: 6,
   levelType: LevelType.WAVE,
   timeLimitSeconds: 80,
-  ballRadius: MAZE_BALL_RADIUS,
+  ballRadius: GAME_CONFIG.BALL_RADIUS,
   walls: {
     hasWalls: true,
     corridorWidth: 72,
@@ -207,7 +207,7 @@ const level7: LevelConfig = {
   levelId: 7,
   levelType: LevelType.ZIGZAG,
   timeLimitSeconds: 90,
-  ballRadius: MAZE_BALL_RADIUS,
+  ballRadius: GAME_CONFIG.BALL_RADIUS,
   walls: {
     hasWalls: true,
     corridorWidth: 72,
