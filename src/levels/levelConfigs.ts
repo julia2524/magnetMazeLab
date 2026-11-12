@@ -19,7 +19,7 @@ const COMMON = {
 };
 
 // 벽이 있는 레벨은 통로 안을 지나야 하므로 쇠구슬을 조금 작게 쓴다 (Level 1 은 기존 크기 그대로)
-//const MAZE_BALL_RADIUS = 16;
+const MAZE_BALL_RADIUS = 16;
 
 const NO_WALLS: WallSettings = {
   hasWalls: false,

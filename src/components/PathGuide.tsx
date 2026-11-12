@@ -1,6 +1,7 @@
 import { StyleSheet, View } from "react-native";
 import Svg, { Circle, Polygon } from "react-native-svg";
 import { GAME_CONFIG } from "../constants/gameConfig";
+import { goalRadiusFor } from "../game/arrival";
 import { toBoardPoint } from "../levels/levelGenerator";
 import type { GeneratedRound } from "../levels/levelTypes";
 
@@ -38,9 +39,10 @@ export function PathGuide({
 }: Props) {
   const start = toBoardPoint(round.startPosition, width, height);
   const goal = toBoardPoint(round.goalPosition, width, height);
-  const G = GAME_CONFIG.GOAL_RADIUS;
-  // 시작점 표시 크기는 구슬보다 약간 크게 (레벨별 구슬 크기는 IronBall 이 처리)
-  const startR = GAME_CONFIG.BALL_RADIUS + 8;
+  // 도착 판정 반지름과 같은 값. 통로 끝(반원) 안에 들어가도록 제한됨
+  const G = goalRadiusFor(corridorWidth);
+  const fit = corridorWidth ? corridorWidth / 2 - 3 : Infinity;
+  const startR = Math.min((ballRadius ?? GAME_CONFIG.BALL_RADIUS) + 8, fit);
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
